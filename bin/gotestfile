@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+PACKAGE_NAME=`pwd|xargs basename`
+
+echo -n , | 9p write acme/$winid/addr
+9p write acme/$winid/data << EOF
+package $PACKAGE_NAME
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestXyz(t *testing.T) {
+	assert.True(t, true)
+}
+EOF

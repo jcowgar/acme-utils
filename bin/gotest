@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+win gow -S "------" test ./...
+

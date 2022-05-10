@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+edi-pprint -narrow $samfile
+
+new_winid=$(9p ls acme | sort -g | tail -n 1)
+
+echo -n 0,0|9p write acme/$new_winid/addr
+echo -n dot=addr|9p write acme/$new_winid/ctl
+echo -n show|9p write acme/$new_winid/ctl
+

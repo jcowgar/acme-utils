@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+filename=$(basename -- "$samfile")
+extension="${filename##*.}"
+
+${extension}mainfile

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+SQL=$(9p read acme/$winid/rdsel)
+
+if [ -z "$SQL" ]; then
+	SQL=$(9p read acme/$winid/body)
+fi
+
+echo "$SQL" | asq
+
+new_winid=$(9p ls acme | sort -g | tail -n 1)
+
+echo "name +SQL" | 9p write acme/$new_winid/ctl
+echo "clean" | 9p write acme/$new_winid/ctl
+echo -n 0,0 | 9p write acme/$new_winid/addr
+echo -n dot=addr | 9p write acme/$new_winid/ctl
+echo -n show | 9p write acme/$new_winid/ctl
+
