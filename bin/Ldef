@@ -1,0 +1,2 @@
+#!/Users/jeremy/Projects/other/plan9/bin/rc
+exec L def $*
