@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+echo -n "/[A-Za-z0-9]+.snew/" | 9p write acme/$winid/addr
+echo -n "dot=addr" | 9p write acme/$winid/ctl
+
+command=$(9p read acme/$winid/rdsel)
+struct=$(echo $command | cut -d . -f 1)
+
+echo -n "/type $struct/+1,/}/-1" | 9p write acme/$winid/addr
+echo -n "dot=addr" | 9p write acme/$winid/ctl
+
+echo "&${struct}{" > /tmp/file.txt
+9p read acme/$winid/rdsel | sed 's/\([A-Za-z0-9]\) .*/\1: /g' >> /tmp/file.txt
+echo "}" >> /tmp/file.txt
+
+echo -n "/$command/" | 9p write acme/$winid/addr
+echo -n "dot=addr" | 9p write acme/$winid/ctl
+
+cat /tmp/file.txt | 9p write acme/$winid/wrsel
