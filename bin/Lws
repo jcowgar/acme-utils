@@ -1,2 +1,2 @@
-#!/Users/jeremy/Projects/other/plan9/bin/rc
+#!/usr/bin/env rc
 exec L ws $*

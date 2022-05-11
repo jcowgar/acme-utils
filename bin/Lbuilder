@@ -1,8 +1,8 @@
-#!/Users/jeremy/Projects/other/plan9/bin/rc
+#!/usr/bin/env rc
 
 for(cmd in comp def fmt hov impls refs rn sig syms type assist ws ws+ ws-){
 	> L^$cmd {
-		echo '#!/Users/jeremy/Projects/other/plan9/bin/rc'
+		echo '#!/usr/bin/env rc'
 		echo exec L $cmd '$*'
 	}
 	chmod +x L^$cmd
