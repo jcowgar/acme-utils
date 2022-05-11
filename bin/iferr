@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+echo -n "/iferr/" | 9p write acme/$winid/addr
+echo "dot=addr" | 9p write acme/$winid/ctl
+
 9p write acme/$winid/wrsel << EOF
 if err != nil {
 	return fmt.Errorf("%w", err)
