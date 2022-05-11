@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+content=$(9p read acme/$winid/rdsel)
+from_sel=1
+lines_between_queries=0
+
+if [ -z "$content" ]; then
+	content=$(9p read acme/$winid/body)
+	from_sel=0
+	lines_between_queries=2
+
+	echo -n ",$" | 9p write acme/$winid/addr
+	echo -n "dot=addr" | 9p write acme/$winid/ctl
+fi
+
+echo $content \
+    | sql-formatter --lines-between-queries=$lines_between_queries \
+    | sed '/^$/d' \
+    | 9p write acme/$winid/wrsel
+
+if [ $from_sel == 0 ]; then
+	echo -n "0,0" | 9p write acme/$winid/addr
+	echo -n "dot=addr" | 9p write acme/$winid/ctl
+	echo -n "show" | 9p write acme/$winid/ctl
+fi
+
