@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+#
+# An adaptation of the Slide, NextSlide and PrevSlide scripts written for the ad
+# editor: https://github.com/sminez/ad/tree/develop/data/bin
+#
+
+function acme_buffer_read() {
+  buffer=$1
+  file=$2
+  
+  9p read acme/$buffer/$file
+}
+
+function acme_mark_clean() {
+  buffer=$1
+  
+  echo -n clean | 9p write acme/$buffer/ctl
+}
+
+function acme_set_name() {
+  buffer=$1
+  name=$2
+  
+  echo "name $name" | 9p write acme/$buffer/ctl
+}
+
+function acme_get_name() {
+  buffer=$1
+  
+  9p read acme/$buffer/tag | cut -d ' ' -f 1
+}
+
+function acme_read_named_file() {
+  buffer=$1
+  
+  echo -n get | 9p write acme/$buffer/ctl
+}
+
+function acme_goto_position() {
+  buffer=$1
+  position=$2
+  
+  echo -n "$position" | 9p write acme/$buffer/addr
+  echo -n "dot=addr" | 9p write acme/$buffer/ctl
+}
+
+function acme_insert_file() {
+  buffer=$1
+  filename=$2
+  
+  cat $filename | 9p write acme/$buffer/wrsel
+}
+
+fname="$(acme_get_name $winid)"
+f="$(basename "$fname")"
+d="$(dirname "$fname")"
+
+index="$(cat "$d/index")"
+toLoad="$(cat "$d/index" | head -n1)"
+
+case "$1" in
+  next)
+    i="$(grep -n "^$f\$" "$d/index" | cut -d: -f1)"
+    j="$(( "$i" + 1 ))"
+    toLoad="$(nl "$d/index" | grep "\s$j\s" | cut -f2)"
+    [ -z "$toLoad" ] && exit 1
+    ;;
+
+  prev)
+    i="$(grep -n "^$f\$" "$d/index" | cut -d: -f1)"
+    j="$(( "$i" - 1 ))"
+    toLoad="$(nl "$d/index" | grep "\s$j\s" | cut -f2)"
+    [ -z "$toLoad" ] && exit 1
+    ;;
+esac
+
+acme_mark_clean $winid
+acme_set_name $winid $d/$toLoad
+acme_mark_clean $winid
+acme_read_named_file $winid
+acme_goto_position $winid "0,0"
+acme_insert_file $winid "$HOME/slide-header"
+acme_goto_position $winid "0,0" 
+acme_mark_clean $winid

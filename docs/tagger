@@ -1,0 +1,7 @@
+# Tagger
+
+This watches for new and saved files matching the file extension to a
+set of rules. If a rule matches, the tag for that window is updated.
+
+This enables you to put common commands on the tag automatically based
+on file extension.
