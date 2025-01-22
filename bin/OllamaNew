@@ -1,3 +1,26 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-echo "# Title Here\n\n## You [[OllamaSend]]\n" | 9p write acme/new/body
+find_prompt() {
+    dir=$(pwd)
+    while [ "$dir" != "/" ]; do
+        if [ -f "$dir/.prompt" ]; then
+            cat "$dir/.prompt"
+            return
+        fi
+        dir=$(dirname "$dir")
+    done
+    # Also check root directory
+    if [ -f "/.prompt" ]; then
+        cat "/.prompt"
+        return
+    fi
+    # Return empty if no file found
+    printf ''
+}
+
+prompt=$(find_prompt)
+echo -e "# Title Here\n${prompt}\n\n## You [[OllamaSend]]\n" | 9p write acme/new/body
+
+new_winid=$(9p ls acme | sort -g | tail -n 1)
+
+echo -n clean | 9p write acme/$new_winid/ctl
