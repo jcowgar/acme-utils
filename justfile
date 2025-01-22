@@ -27,11 +27,15 @@ test-coverage:
 # Run golangci-lint
 lint:
     golangci-lint run
+    
+# Build the specified command
+build target:
+    go build -v ./cmd/{{target}}
 
 # Build debug versions of both commands
-build:
-    go build -v ./cmd/acme-tagger
-    go build -v ./cmd/acme-ollama
+build-all:
+    just build acme-tagger
+    just build acme-ollama
 
 # Clean build artifacts
 clean:

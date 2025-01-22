@@ -1,4 +1,3 @@
-// main.go
 package main
 
 import (
@@ -8,14 +7,36 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"strconv"
+	"os"
 
 	"9fans.net/go/acme"
-	"github.com/jcowgar/acme-utils/internal/ollama"
 	ollamaapi "github.com/ollama/ollama/api"
+
+	"github.com/jcowgar/acme-utils/internal/ollama"
+	"github.com/jcowgar/acme-utils/internal/config"
 )
 
 func main() {
-	baseURL, err := url.Parse("http://localhost:11434")
+	winIDEnv := os.Getenv("winid")
+	if winIDEnv == "" {
+		log.Printf("must be ran from within Acme, `winid` not set.\n")
+		return
+	}
+
+	winID, err := strconv.Atoi(winIDEnv)
+	if err != nil {
+		log.Printf("could not convert %v into an integer winID\n", err)
+		return
+	}
+
+    cfg, err := config.Load()
+    if err != nil {
+    	log.Printf("failed to load configuration: %v\n", err)
+    	return
+    }
+
+	baseURL, err := url.Parse(cfg.Ollama.BaseURL)
 	if err != nil {
 		log.Printf("failed to parse URL: %v\n", err)
 		return
@@ -23,36 +44,12 @@ func main() {
 
 	client := ollamaapi.NewClient(baseURL, http.DefaultClient)
 
-	acmeLog, err := acme.Log()
-	if err != nil {
-		log.Printf("could not create log watcher: %v\n", err)
-		return
-	}
-	defer acmeLog.Close()
-
-	for {
-		event, err := acmeLog.Read()
-		if err != nil {
-			log.Printf("could not read acme log: %v\n", err)
-			return
-		}
-
-		switch event.Op {
-		case "put":
-			if err := MaybeTalkToOllama(event.ID, event.Name, client); err != nil {
-				log.Printf("error processing ollama request for window %d: %v\n", event.ID, err)
-			}
-		default:
-			// log.Printf("not interested in event %#v\n", event)
-		}
+	if err := MaybeTalkToOllama(client, winID); err != nil {
+		log.Printf("error processing ollama request for window %d: %v\n", winID, err)
 	}
 }
 
-func MaybeTalkToOllama(winID int, filename string, client *ollamaapi.Client) error {
-	if !strings.Contains(filename, "+ollama") {
-		return nil
-	}
-
+func MaybeTalkToOllama(client *ollamaapi.Client, winID int) error {
 	win, err := acme.Open(winID, nil)
 	if err != nil {
 		return fmt.Errorf("could not open winID %d: %w", winID, err)
@@ -135,7 +132,7 @@ func MaybeTalkToOllama(winID int, filename string, client *ollamaapi.Client) err
 	newContent := conversation.String()
 
 	// Add the new "You" section
-	newContent += "## You\n\n"
+	newContent += "## You [[OllamaSend]]\n\n"
 
 	_, err = win.Write("data", []byte(newContent))
 	if err != nil {
