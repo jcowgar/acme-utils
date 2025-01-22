@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"9fans.net/go/acme"
+
+	"github.com/jcowgar/acme-utils/internal/config"
 )
 
 func hasTag(win *acme.Win, checkTag string) (bool, error) {
@@ -19,7 +21,7 @@ func hasTag(win *acme.Win, checkTag string) (bool, error) {
 	return strings.Contains(string(tagBytes), checkTag), nil
 }
 
-func maybeTagWindow(tc *TagConfiguration, winID int, filename string) error {
+func maybeTagWindow(tc *config.TagConfiguration, winID int, filename string) error {
 	win, err := acme.Open(winID, nil)
 	if err != nil {
 		return fmt.Errorf("could not open winID %d: %v\n", winID, err)

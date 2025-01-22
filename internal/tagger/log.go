@@ -5,9 +5,11 @@ import (
 	"path/filepath"
 
 	"9fans.net/go/acme"
+
+	"github.com/jcowgar/acme-utils/internal/config"
 )
 
-func ExecuteLogLoop(config Configuration) {
+func ExecuteLogLoop(config config.Configuration) {
 	acmeLog, err := acme.Log()
 	if err != nil {
 		log.Printf("could not create log watcher: %v\n", err)
@@ -25,7 +27,7 @@ func ExecuteLogLoop(config Configuration) {
 		switch event.Op {
 		case "new", "put":
 			ext := filepath.Ext(event.Name)
-			tc := config.Find(ext)
+			tc := config.TaggerFor(ext)
 
 			if tc != nil {
 				maybeTagWindow(tc, event.ID, event.Name)
