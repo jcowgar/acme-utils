@@ -1,4 +1,3 @@
-
 I am writing software that interfaces with the Acme text editor. The
 code is largely Go and interface code in bash or sh.
 
@@ -14,5 +13,3 @@ I prefer:
 * Comments when the code is complex and needs explanation
 * Longer identifier names vs abbreviations. Only abbreviations
   when very well known
-
-
