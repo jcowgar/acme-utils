@@ -6,15 +6,15 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"strings"
-	"strconv"
 	"os"
+	"strconv"
+	"strings"
 
 	"9fans.net/go/acme"
 	ollamaapi "github.com/ollama/ollama/api"
 
-	"github.com/jcowgar/acme-utils/internal/ollama"
 	"github.com/jcowgar/acme-utils/internal/config"
+	"github.com/jcowgar/acme-utils/internal/ollama"
 )
 
 func main() {
@@ -30,11 +30,11 @@ func main() {
 		return
 	}
 
-    cfg, err := config.Load()
-    if err != nil {
-    	log.Printf("failed to load configuration: %v\n", err)
-    	return
-    }
+	cfg, err := config.Load()
+	if err != nil {
+		log.Printf("failed to load configuration: %v\n", err)
+		return
+	}
 
 	baseURL, err := url.Parse(cfg.Ollama.BaseURL)
 	if err != nil {
