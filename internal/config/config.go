@@ -16,14 +16,20 @@ type TagConfiguration struct {
 	Tag       string `yaml:"tag"`
 }
 
+type FormattingConfiguration struct {
+	Extension string `yaml:"extension"`
+	Command   string `yaml:"command"`
+}
+
 type OllamaConfiguration struct {
 	DefaultModel string `yaml:"default_model"`
 	BaseURL      string `yaml:"base_url"`
 }
 
 type Configuration struct {
-	Tagger []TagConfiguration  `yaml:"tagger"`
-	Ollama OllamaConfiguration `yaml:"ollama"`
+	Tagger     []TagConfiguration        `yaml:"tagger"`
+	Formatting []FormattingConfiguration `yaml:"formatting"`
+	Ollama     OllamaConfiguration       `yaml:"ollama"`
 }
 
 func Load() (Configuration, error) {
@@ -50,8 +56,19 @@ func Load() (Configuration, error) {
 }
 
 func (c Configuration) TaggerFor(extension string) *TagConfiguration {
-	extension = strings.TrimPrefix(extension, ".")
+	         extension = strings.TrimPrefix(extension, ".")
 	for _, v := range c.Tagger {
+		if v.Extension == extension {
+			return &v 
+		}
+	}
+
+	return nil
+}
+
+func (c Configuration) FormatterFor(extension string) *FormattingConfiguration {
+extension = strings.TrimPrefix(extension, ".")
+	for _, v := range c.Formatting {
 		if v.Extension == extension {
 			return &v
 		}

@@ -7,6 +7,9 @@ tagger:
     tag: sqlf Ldef Limpls Lrefs Lsyms Ltype Lrn
   - extension: sql
     tag: sqlf psqlq asqq
+formatting:
+  - extension: go
+    command: goimports %f
 ollama:
   default_model: phi4
   base_url: http://localhost:11434
