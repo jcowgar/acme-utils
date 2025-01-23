@@ -90,16 +90,88 @@ func MaybeTalkToOllama(client *ollamaapi.Client, winID int) error {
 		return fmt.Errorf("failed to write response back to window: %w", err)
 	}
 
+	// Insert files into the conversation, if the user requested them.
+	if conversation.IncludeFiles {
+		// Get all windows from Acme
+		windows, err := acme.Windows()
+		if err == nil { // Don't fail if we can't access Acme
+			for _, winInfo := range windows {
+				// Skip if it's a directory
+				if winInfo.IsDir {
+					continue
+				}
+
+				// Skip if it is our AI chat file
+				if winInfo.ID == winID {
+					continue
+				}
+
+				// Skip if filename is empty
+				if winInfo.Name == "" {
+					continue
+				}
+
+				// Skip if the name is not a Normal filename. Acme has buffers such as +win that
+				// are not real files. We do not wish to include that content.
+				if !strings.Contains(winInfo.Name, ".") || strings.HasPrefix(winInfo.Name, "+") {
+					continue
+				}
+
+				log.Printf("including file: %v\n", winInfo.Name)
+
+				// Open the window
+				win, err := acme.Open(winInfo.ID, nil)
+				if err != nil {
+					continue
+				}
+				defer win.CloseFiles()
+
+				// Read the content of the window
+				content, err := win.ReadAll("body")
+				if err != nil {
+					continue
+				}
+
+				// Add the file to our conversation
+				conversation.AddFile(winInfo.Name, string(content))
+			}
+		}
+	}
+
 	// Convert all messages to Ollama API format
 	messages := make([]ollamaapi.Message, 0, len(conversation.Messages))
+	filesInserted := false // Local flag to track if files have been inserted
+
 	for _, msg := range conversation.Messages {
 		role := "user"
 		if msg.Role == "Response" {
 			role = "assistant"
 		}
+
+		content := msg.Content
+		// If this is a user message containing "+files" and we haven't inserted files yet
+		if conversation.IncludeFiles &&
+			!filesInserted &&
+			role == "user" &&
+			strings.Contains(msg.Content, "+files") &&
+			len(conversation.Files) > 0 {
+
+			var filesSection strings.Builder
+			filesSection.WriteString("\n\n# Relevant Files\n\n")
+
+			for _, file := range conversation.Files {
+				filesSection.WriteString(fmt.Sprintf("Filename: %s\n```\n%s\n```\n\n",
+					file.Name,
+					file.Content))
+			}
+
+			content += filesSection.String()
+			filesInserted = true // Mark that we've inserted the files
+		}
+
 		messages = append(messages, ollamaapi.Message{
 			Role:    role,
-			Content: msg.Content,
+			Content: content,
 		})
 	}
 

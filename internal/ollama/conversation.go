@@ -1,4 +1,3 @@
-// conversation.go
 package ollama
 
 import (
@@ -9,12 +8,20 @@ import (
 	"time"
 )
 
+// File represents a file attached to the conversation
+type File struct {
+	Name    string
+	Content string
+}
+
 // Conversation represents the entire chat interaction
 type Conversation struct {
-	Title      string
-	Model      string
-	Parameters map[string]interface{} // For additional Ollama parameters
-	Messages   []Message
+	Title        string
+	Model        string
+	Parameters   map[string]interface{} // For additional Ollama parameters
+	Messages     []Message
+	Files        []File // New Files property
+	IncludeFiles bool   // Flag to indicate if files should be included
 }
 
 // Message represents a single message in the conversation
@@ -24,12 +31,25 @@ type Message struct {
 	Timestamp time.Time // Optional, for future use
 }
 
+// AddFile adds a new file to the conversation
+func (c *Conversation) AddFile(name string, content string) {
+	if c.Files == nil {
+		c.Files = make([]File, 0)
+	}
+	c.Files = append(c.Files, File{
+		Name:    name,
+		Content: content,
+	})
+}
+
 // ParseContent parses the markdown content and returns a Conversation
 func ParseContent(content string) (*Conversation, error) {
 	scanner := bufio.NewScanner(strings.NewReader(content))
 	conv := &Conversation{
-		Messages:   make([]Message, 0),
-		Parameters: make(map[string]interface{}),
+		Messages:     make([]Message, 0),
+		Parameters:   make(map[string]interface{}),
+		Files:        make([]File, 0),
+		IncludeFiles: false, // Initialize to false by default
 	}
 
 	var currentRole string
@@ -89,11 +109,16 @@ func ParseContent(content string) (*Conversation, error) {
 		if strings.HasPrefix(line, "### Response") {
 			// Save previous message if exists
 			if currentRole != "" && currentContent.Len() > 0 {
+				messageContent := strings.TrimSpace(currentContent.String())
 				conv.Messages = append(conv.Messages, Message{
 					Role:      currentRole,
-					Content:   strings.TrimSpace(currentContent.String()),
+					Content:   messageContent,
 					Timestamp: time.Now(),
 				})
+				// Check for "+files" in user messages
+				if currentRole == "You" && strings.Contains(messageContent, "+files") {
+					conv.IncludeFiles = true
+				}
 				currentContent.Reset()
 			}
 			currentRole = "Response"
@@ -108,11 +133,16 @@ func ParseContent(content string) (*Conversation, error) {
 
 	// Add the last message if exists
 	if currentRole != "" && currentContent.Len() > 0 {
+		messageContent := strings.TrimSpace(currentContent.String())
 		conv.Messages = append(conv.Messages, Message{
 			Role:      currentRole,
-			Content:   strings.TrimSpace(currentContent.String()),
+			Content:   messageContent,
 			Timestamp: time.Now(),
 		})
+		// Check for "+files" in the last user message
+		if currentRole == "You" && strings.Contains(messageContent, "+files") {
+			conv.IncludeFiles = true
+		}
 	}
 
 	if len(conv.Messages) == 0 {
