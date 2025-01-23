@@ -7,6 +7,7 @@ I prefer:
 
 * Code that reads as English
 * More functions than deeper nesting
+* Functions should have a single responsibility, where possible
 * Readable code to concise magic
 * Documentation on API functions
 * Self documenting code over comments
