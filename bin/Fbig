@@ -1,0 +1,6 @@
+#!/usr/bin/env rc
+
+# Set the font to Big, this would be useful for screen
+# sharing and pair programming.
+
+F 24

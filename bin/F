@@ -1,0 +1,98 @@
+#!/usr/bin/env rc
+
+# Print current Acme window's font or set/increase/decrease its size.
+# Usage:
+#     F [h|l] [N|+N|-N] [p]
+# where N is a number,
+# h treats the current screen as a high DPI screen (default),
+# l treats the current screen as a low DPI screen,
+# N indicates set font to N points,
+# +N indicates increase font by N points,
+# -N indicates decrease font by N points.
+# p will print the font post-resize, if any, to stdout.
+# At least one of N, +N, -N, p must be specified.
+# Users can use convenience functions
+# F- and F+ (for low DPI screens) or
+# F-- and F++ (for high DPI screens)
+# instead of calling this script directly.
+
+# NOTE: the parameters are parsed left to right,
+# so the right-most among h and l is prioritized, and
+# the right-most among N, +N and -N is prioritized.
+
+if (~ $#winid 0) {
+	9 echo must be run from within acme >[1=2]
+	exit 1
+}
+
+if(test $#* -eq 0) {
+	9 echo 'needs at least 1 parameter' >[1=2]
+	9 echo 'usage: F [h|l] [N|+N|-N] [p]' >[1=2]
+	exit 1
+}
+
+# Defaults
+ishidpi=1
+printfont=0
+gradient=0
+magnitude=''
+
+while(test $#* -gt 0) {
+	switch($1) {
+		case h
+			ishidpi=1
+		case l
+			ishidpi=0
+		case p
+			printfont=1
+		case [1-9]*
+			gradient=0
+			magnitude=$1
+		case -[1-9]*
+			gradient=-1
+			magnitude=`{9 echo -n $1 | cut -c 2-}
+		case +[1-9]*
+			gradient=1
+			magnitude=`{9 echo -n $1 | cut -c 2-}
+		case *
+			9 echo 'unsupported param '^$p >[1=2]
+			exit 1
+	}
+	shift
+}
+
+curfont=`{9p read acme/$winid/ctl | 9 awk '{print $7}'}
+isfontsrvfont=`{9 echo $curfont | 9 grep -s '^/mnt/font/' && 9 echo 1 || 9 echo 0}
+
+fn curfontsize {
+	size=`{9 echo $curfont | 9 sed 's;.*/mnt/font/.+/([0-9]+)a?/font.*;\1;'}
+	if (~ $ishidpi 1) size=`{9 echo $size'/2' | 9 hoc}
+	echo $size
+}
+
+if(test -z $magnitude -a $printfont -eq 0) {
+	9 echo No action p or N or +N or -N specified >[1=2]
+	exit 3
+}
+
+if (~ $isfontsrvfont 0) {
+	if(test -n $magnitude) {
+		9 echo Resizing not supported for non-fontsrv font, currently $curfont >[1=2]
+		exit 2
+	}
+	if not newfont=$curfont
+}
+if not {
+	if(test -n $magnitude) {
+		if(~ $gradient 0)	newsize=$magnitude
+		if not 			newsize=`{9 echo `{curfontsize}^' + ('^$gradient^'*'^$magnitude^')' | 9 hoc}
+
+		newfont=`{9 echo $curfont | 9 sed 's;.*(/mnt/font/.+/)[0-9]+(a?/font).*;\1'$newsize'\2;'}
+		9 echo font $newfont | 9p write acme/$winid/ctl
+	}
+	# No font size change, so use old font for newfont value
+	if not newfont=`{9 echo $curfont | 9 sed 's;.*(/mnt/font/.+/)[0-9]+(a?/font).*;\1'`{curfontsize}'\2;'}
+}
+
+if (~ $printfont 1) 9 echo $newfont
+if not exit 0

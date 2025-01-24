@@ -1,0 +1,5 @@
+#!/usr/bin/env rc
+
+# Set the font to Huge, this would be useful for presentations
+
+F 36
