@@ -21,7 +21,7 @@ func hasTag(win *acme.Win, tag string) (bool, error) {
 	return strings.Contains(string(tagBytes), tag), nil
 }
 
-func maybeTagWindow(tc *config.TagConfiguration, winID int, filename string) error {
+func maybeTagWindow(tc *config.TagConfig, winID int, filename string) error {
 	win, err := acme.Open(winID, nil)
 	if err != nil {
 		return fmt.Errorf("could not open winID %d: %v\n", winID, err)

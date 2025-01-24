@@ -1,14 +1,8 @@
 package tagger
 
 import (
-	"bytes"
-	"fmt"
-	"io/ioutil"
 	"log"
-	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"9fans.net/go/acme"
@@ -16,7 +10,7 @@ import (
 	"github.com/jcowgar/acme-utils/internal/config"
 )
 
-func ExecuteLogLoop(config config.Configuration) {
+func ExecuteLogLoop(config config.Config) {
 	acmeLog, err := acme.Log()
 	if err != nil {
 		log.Printf("could not create log watcher: %v\n", err)
@@ -31,18 +25,17 @@ func ExecuteLogLoop(config config.Configuration) {
 			return
 		}
 
+		if event.Name == "" {
+			continue
+		}
+
 		switch event.Op {
-		case "new", "put":
-			ext := filepath.Ext(event.Name)
-			tc := config.TaggerFor(ext)
+		case "new":
+			maybe_tag(config, event.ID, event.Name)
 
-			if tc != nil {
-				maybeTagWindow(tc, event.ID, event.Name)
-			}
-
-			if event.Name != "" && event.Op == "put" && strings.HasSuffix(event.Name, ".go") {
-				reformat(config, event.ID, event.Name)
-			}
+		case "put":
+			maybe_tag(config, event.ID, event.Name)
+			maybe_reformat(config, event.ID, event.Name)
 
 		default:
 			// log.Printf("not interested in %#v\n", event)
@@ -50,167 +43,32 @@ func ExecuteLogLoop(config config.Configuration) {
 	}
 }
 
-func parseCommand(cmdStr string, filename string) []string {
-	// First split the command string into parts
-	parts := strings.Fields(cmdStr)
+func maybe_tag(config config.Config, winID int, filename string) {
+	ext := filepath.Ext(filename)
+	tc := config.TaggerFor(ext)
 
-	// Create a result slice
-	result := make([]string, len(parts))
-
-	// Replace %f with filename in each part
-	for i, part := range parts {
-		result[i] = strings.ReplaceAll(part, "%f", filename)
+	if tc != nil {
+		maybeTagWindow(tc, winID, filename)
 	}
-
-	return result
 }
 
-// Code originally from: https://github.com/prodhe/acmefmt
-func reformat(config config.Configuration, id int, name string) {
-	ext := filepath.Ext(name)
+func maybe_reformat(config config.Config, winID int, filename string) {
+	ext := filepath.Ext(filename)
 	formatter := config.FormatterFor(ext)
 	if formatter == nil {
 		return
 	}
 
-	cmd := parseCommand(formatter.Command, name)
+	// First split the command string into parts
+	parts := strings.Fields(formatter.Command)
 
-	w, err := acme.Open(id, nil)
-	if err != nil {
-		log.Print(err)
-		return
-	}
-	defer w.CloseFiles()
+	// Create a result slice
+	cmd := make([]string, len(parts))
 
-	old, err := ioutil.ReadFile(name)
-	if err != nil {
-		//log.Print(err)
-		return
-	}
-	new, err := exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
-	if err != nil {
-		if strings.Contains(string(new), "fatal error") {
-			fmt.Fprintf(os.Stderr, "%s: %s: %v\n%s", cmd[0], name, err, new)
-		} else {
-			fmt.Fprintf(os.Stderr, "%s", new)
-		}
-		return
+	// Replace %f with filename in each part
+	for i, part := range parts {
+		cmd[i] = strings.ReplaceAll(part, "%f", filename)
 	}
 
-	if bytes.Equal(old, new) {
-		return
-	}
-
-	f, err := ioutil.TempFile("", "acmefmt")
-	if err != nil {
-		log.Print(err)
-		return
-	}
-	if _, err := f.Write(new); err != nil {
-		log.Print(err)
-		return
-	}
-	tmp := f.Name()
-	f.Close()
-	defer os.Remove(tmp)
-
-	diff, _ := exec.Command("9", "diff", name, tmp).CombinedOutput()
-
-	latest, err := w.ReadAll("body")
-	if err != nil {
-		log.Print(err)
-		return
-	}
-	if !bytes.Equal(old, latest) {
-		log.Printf("skipped update to %s: window modified since Put\n", name)
-		return
-	}
-
-	w.Write("ctl", []byte("mark"))
-	w.Write("ctl", []byte("nomark"))
-	diffLines := strings.Split(string(diff), "\n")
-	for i := len(diffLines) - 1; i >= 0; i-- {
-		line := diffLines[i]
-		if line == "" {
-			continue
-		}
-		if line[0] == '<' || line[0] == '-' || line[0] == '>' {
-			continue
-		}
-		j := 0
-		for j < len(line) && line[j] != 'a' && line[j] != 'c' && line[j] != 'd' {
-			j++
-		}
-		if j >= len(line) {
-			log.Printf("cannot parse diff line: %q", line)
-			break
-		}
-		oldStart, oldEnd := parseSpan(line[:j])
-		newStart, newEnd := parseSpan(line[j+1:])
-		if oldStart == 0 || newStart == 0 {
-			continue
-		}
-		switch line[j] {
-		case 'a':
-			err := w.Addr("%d+#0", oldStart)
-			if err != nil {
-				log.Print(err)
-				break
-			}
-			w.Write("data", findLines(new, newStart, newEnd))
-		case 'c':
-			err := w.Addr("%d,%d", oldStart, oldEnd)
-			if err != nil {
-				log.Print(err)
-				break
-			}
-			w.Write("data", findLines(new, newStart, newEnd))
-		case 'd':
-			err := w.Addr("%d,%d", oldStart, oldEnd)
-			if err != nil {
-				log.Print(err)
-				break
-			}
-			w.Write("data", nil)
-		}
-	}
-}
-
-func parseSpan(text string) (start, end int) {
-	i := strings.Index(text, ",")
-	if i < 0 {
-		n, err := strconv.Atoi(text)
-		if err != nil {
-			log.Printf("cannot parse span %q", text)
-			return 0, 0
-		}
-		return n, n
-	}
-	start, err1 := strconv.Atoi(text[:i])
-	end, err2 := strconv.Atoi(text[i+1:])
-	if err1 != nil || err2 != nil {
-		log.Printf("cannot parse span %q", text)
-		return 0, 0
-	}
-	return start, end
-}
-
-func findLines(text []byte, start, end int) []byte {
-	i := 0
-
-	start--
-	for ; i < len(text) && start > 0; i++ {
-		if text[i] == '\n' {
-			start--
-			end--
-		}
-	}
-	startByte := i
-	for ; i < len(text) && end > 0; i++ {
-		if text[i] == '\n' {
-			end--
-		}
-	}
-	endByte := i
-	return text[startByte:endByte]
+	reformat_win(winID, cmd, filename, formatter.InPlace)
 }

@@ -1,15 +1,32 @@
 tagger:
   - extension: ts
-    tag: sqlf Ldef Limpls Lrefs Lsyms Ltype Lrn
+    tag: Ldef Limpls Lrefs Lsyms Ltype Lrn
   - extension: js
-    tag: sqlf Ldef Limpls Lrefs Lsyms Ltype Lrn
+    tag: Ldef Limpls Lrefs Lsyms Ltype Lrn
   - extension: go
-    tag: sqlf Ldef Limpls Lrefs Lsyms Ltype Lrn
+    tag: Ldef Limpls Lrefs Lsyms Ltype Lrn
   - extension: sql
     tag: sqlf psqlq asqq
+  - extension: md
+    tag: Font
+  - extension: ex
+    tag: Ldef Lhov
+  - extension: exs
+    tag: Ldef Lhov
 formatting:
   - extension: go
     command: goimports %f
+  - extension: ex
+    command: mix format %f
+    in_place: true
+  - extension: exs
+    command: mix format %f
+    in_place: true
+  - extension: heex
+    command: mix format %f
+    in_place: true
+  - extension: md
+    command: prettier --print-width=78 --prose-wrap=always %f
 ollama:
   default_model: phi4
   base_url: http://localhost:11434

@@ -5,76 +5,42 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"strings"
 
 	yaml "gopkg.in/yaml.v2"
 )
 
-type TagConfiguration struct {
-	Extension string `yaml:"extension"`
-	CheckTag  string `yaml:"checkTag"`
-	Tag       string `yaml:"tag"`
-}
-
-type FormattingConfiguration struct {
-	Extension string `yaml:"extension"`
-	Command   string `yaml:"command"`
-}
-
-type OllamaConfiguration struct {
+type OllamaConfig struct {
 	DefaultModel string `yaml:"default_model"`
 	BaseURL      string `yaml:"base_url"`
 }
 
-type Configuration struct {
-	Tagger     []TagConfiguration        `yaml:"tagger"`
-	Formatting []FormattingConfiguration `yaml:"formatting"`
-	Ollama     OllamaConfiguration       `yaml:"ollama"`
+type Config struct {
+	Tagger     []TagConfig        `yaml:"tagger"`
+	Formatting []Formatter `yaml:"formatting"`
+	Ollama     OllamaConfig       `yaml:"ollama"`
 }
 
-func Load() (Configuration, error) {
+func Load() (Config, error) {
 	config_filename, err := getConfigFile("acme-utils", "config.yaml")
 	if err != nil {
-		return Configuration{}, fmt.Errorf("could not get configuration file path", err)
+		return Config{}, fmt.Errorf("could not get configuration file path", err)
 	}
 
 	f, err := os.Open(config_filename)
 	if err != nil {
-		return Configuration{},
+		return Config{},
 			fmt.Errorf("could not open configuration file: %v", err)
 	}
 
-	c := Configuration{}
+	c := Config{}
 	d := yaml.NewDecoder(f)
 	err = d.Decode(&c)
 	if err != nil {
-		return Configuration{},
+		return Config{},
 			fmt.Errorf("could not decode the configuration file: %v", err)
 	}
 
 	return c, nil
-}
-
-func (c Configuration) TaggerFor(extension string) *TagConfiguration {
-	         extension = strings.TrimPrefix(extension, ".")
-	for _, v := range c.Tagger {
-		if v.Extension == extension {
-			return &v 
-		}
-	}
-
-	return nil
-}
-
-func (c Configuration) FormatterFor(extension string) *FormattingConfiguration {
-extension = strings.TrimPrefix(extension, ".")
-	for _, v := range c.Formatting {
-		if v.Extension == extension {
-			return &v
-		}
-	}
-
-	return nil
 }
 
 // getConfigFile constructs the full path for a given application's config file.
