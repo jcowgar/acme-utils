@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+
+function ae() {
+	filename=$1
+
+	9p read acme/new/body
+	new_winid=$(9p ls acme | sort -g | tail -n 1)
+
+	echo "name $filename" | 9p write acme/$new_winid/ctl
+	echo -n get | 9p write acme/$new_winid/ctl
+}
+
+ae $HOME/Documents/AcmeWiki
