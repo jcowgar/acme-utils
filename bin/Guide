@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+# Search up the directory tree for a `guide` file. Once found, load it.
+
+ae() {
+	filename=$1
+
+	9p read acme/new/body
+	new_winid=$(9p ls acme | sort -g | tail -n 1)
+
+	echo "name $filename" | 9p write acme/$new_winid/ctl
+	echo -n get | 9p write acme/$new_winid/ctl
+}
+
+find_guide_file() {
+	dir=$(pwd)
+
+	while [ "$dir" != "/" ]; do
+		if [ -f "$dir/guide" ]; then
+			echo "$dir/guide"
+			return
+		fi
+		dir=$(dirname "$dir")
+	done
+
+	printf ''
+}
+
+found_guide_file=$(find_guide_file)
+
+if [ -f "$found_guide_file" ]; then
+	ae $found_guide_file
+fi
