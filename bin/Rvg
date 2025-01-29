@@ -1,3 +1,17 @@
 #!/usr/bin/env sh
 
-rg --vimgrep "$@"
+if [ $# -gt 0 ]; then
+    # If parameters are provided, use them
+    rg --vimgrep "$@"
+else
+    # No parameters, get selected text from Acme window
+    # Read the selected text using 9p read
+    selected_text=$(9p read acme/$winid/rdsel)
+    if [ -n "$selected_text" ]; then
+        rg --vimgrep "$selected_text"
+    else
+        echo "No parameters provided and no text selected in Acme"
+        exit 1
+    fi
+fi
+
