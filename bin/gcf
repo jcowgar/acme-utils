@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+# Determine what our main branch name is
+git branch | grep -E '^\s*main$' > /dev/null 2>1
+
+if [ $? -eq 0 ]; then
+	branch="main"
+else
+	branch="master"
+fi
+
+git diff --name-only $branch
+
