@@ -27,7 +27,7 @@ test-coverage:
 # Run golangci-lint
 lint:
     golangci-lint run
-    
+
 # Build the specified command
 build target:
     go build -v ./cmd/{{target}}
@@ -35,32 +35,32 @@ build target:
 # Build debug versions of both commands
 build-all:
     just build acme-tagger
-    just build acme-ollama
+    just build acme-llm
 
 # Clean build artifacts
 clean:
     rm -f acme-tagger
-    rm -f acme-ollama
+    rm -f acme-llm
     rm -f coverage.out
     rm -f coverage.html
 
 # Build optimized release versions for current platform
 release:
     go build -v -ldflags="-s -w" ./cmd/acme-tagger
-    go build -v -ldflags="-s -w" ./cmd/acme-ollama
+    go build -v -ldflags="-s -w" ./cmd/acme-llm
 
 # Build release versions for multiple platforms
 release-all: clean
     #!/usr/bin/env sh
     mkdir -p dist
     GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/acme-tagger-linux-amd64 ./cmd/acme-tagger
-    GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/acme-ollama-linux-amd64 ./cmd/acme-ollama
+    GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/acme-llm-linux-amd64 ./cmd/acme-llm
     GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/acme-tagger-darwin-amd64 ./cmd/acme-tagger
-    GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/acme-ollama-darwin-amd64 ./cmd/acme-ollama
+    GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/acme-llm-darwin-amd64 ./cmd/acme-llm
     GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/acme-tagger-darwin-arm64 ./cmd/acme-tagger
-    GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/acme-ollama-darwin-arm64 ./cmd/acme-ollama
+    GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/acme-llm-darwin-arm64 ./cmd/acme-llm
     GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/acme-tagger-windows-amd64.exe ./cmd/acme-tagger
-    GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/acme-ollama-windows-amd64.exe ./cmd/acme-ollama
+    GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/acme-llm-windows-amd64.exe ./cmd/acme-llm
 
 # Run all quality checks (format, lint, test)
 check: fmt lint test
@@ -68,7 +68,7 @@ check: fmt lint test
 # Install the commands to $GOPATH/bin
 install:
     go install ./cmd/acme-tagger
-    go install ./cmd/acme-ollama
+    go install ./cmd/acme-llm
 
 # Update all dependencies
 update:

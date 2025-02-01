@@ -9,15 +9,21 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-type OllamaConfig struct {
-	DefaultModel string `yaml:"default_model"`
-	BaseURL      string `yaml:"base_url"`
+type Config struct {
+	Tagger     []TagConfig  `yaml:"tagger"`
+	Formatting []Formatter  `yaml:"formatting"`
+	LLM        LLMConfig    `yaml:"llm"`
 }
 
-type Config struct {
-	Tagger     []TagConfig        `yaml:"tagger"`
-	Formatting []Formatter `yaml:"formatting"`
-	Ollama     OllamaConfig       `yaml:"ollama"`
+type LLMConfig struct {
+	DefaultProvider string                 `yaml:"default_provider"`
+	Providers       map[string]ProviderConfig `yaml:"providers"`
+}
+
+type ProviderConfig struct {
+	Type   string                 `yaml:"type"`
+	Model  string                 `yaml:"model"`
+	Params map[string]interface{} `yaml:"params"`
 }
 
 func Load() (Config, error) {

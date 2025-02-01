@@ -1,4 +1,4 @@
-package ollama
+package conversation
 
 import (
 	"bufio"
@@ -26,7 +26,7 @@ type Conversation struct {
 
 // Message represents a single message in the conversation
 type Message struct {
-	Role      string    // "You" or "Response"
+	Role      string    // "user" or "assistant"
 	Content   string    // The actual message content
 	Timestamp time.Time // Optional, for future use
 }

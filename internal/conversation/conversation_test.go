@@ -1,4 +1,4 @@
-package ollama
+package conversation
 
 import (
 	"strings"

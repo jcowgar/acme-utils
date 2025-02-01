@@ -31,6 +31,11 @@ formatting:
     command: prettier --print-width=78 %f
   - extension: svelte
     command: prettier --print-width=78 %f
-ollama:
-  default_model: qwen2.5-coder:32b
-  base_url: http://10.0.0.50:11434
+llm:
+  default_provider: ollama
+  providers:
+    ollama:
+      type: ollama
+      model: qwen2.5-coder:32b
+      params:
+        base_url: http://10.0.0.50:11434
