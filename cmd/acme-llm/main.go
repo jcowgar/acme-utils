@@ -35,55 +35,75 @@ func main() {
 		return
 	}
 
-	providerConfig := cfg.LLM.Providers[cfg.LLM.DefaultProvider]
+	win, err := acme.Open(winID, nil)
+	if err != nil {
+		log.Printf("could not open winID %d: %w", winID, err)
+		return
+	}
+
+	conv, err := ReadConversation(win, winID)
+	if err != nil {
+		log.Printf("failed to read conversation: %v\n", err)
+		return
+	}
+	if conv == nil {
+		// There is no new conversation data, ignore this request
+		return
+	}
+
+	model := conv.Model
+	if model == "" {
+		model = cfg.LLM.DefaultProvider
+	}
+
+	providerConfig := cfg.LLM.Providers[model]
 	provider, err := llm.NewProvider(providerConfig.Type, providerConfig)
 	if err != nil {
 		log.Printf("failed to create provider: %v\n", err)
 		return
 	}
 
-	if err := MaybeTalkToLLM(provider, winID); err != nil {
+	if err := MaybeTalkToLLM(provider, win, winID, conv); err != nil {
 		log.Printf("error processing LLM request for window %d: %v\n", winID, err)
 	}
 }
 
-func MaybeTalkToLLM(provider llm.Provider, winID int) error {
-	win, err := acme.Open(winID, nil)
-	if err != nil {
-		return fmt.Errorf("could not open winID %d: %w", winID, err)
-	}
-
+func ReadConversation(win *acme.Win, winID int) (*conversation.Conversation, error) {
 	// Get the current window size
-	err = win.Addr("0,$")
+	err := win.Addr("0,$")
 	if err != nil {
-		return fmt.Errorf("failed to set addr to full content: %w", err)
+		return nil, fmt.Errorf("failed to set addr to full content: %w", err)
 	}
 
 	bodyBytes := make([]byte, 256*1024)
 	n, err := win.Read("body", bodyBytes)
 	if err != nil {
-		return fmt.Errorf("could not read the body of winID %d: %w", winID, err)
+		return nil, fmt.Errorf("could not read the body of winID %d: %w", winID, err)
 	}
 
 	content := string(bodyBytes[:n])
 	conv, err := conversation.ParseContent(content)
 	if err != nil {
-		return fmt.Errorf("could not parse conversation content: %w", err)
+		return nil, fmt.Errorf("could not parse conversation content: %w", err)
 	}
 
 	// Get the last message and check if it's empty
 	lastMessage, err := conv.GetLastUserMessage()
 	if err != nil {
-		return fmt.Errorf("could not get last user message: %w", err)
+		return nil, fmt.Errorf("could not get last user message: %w", err)
 	}
 
 	// If the last message is empty or only whitespace, return early
 	if strings.TrimSpace(lastMessage) == "" {
-		return nil
+		return nil, nil
 	}
 
+	return conv, nil
+}
+
+func MaybeTalkToLLM(provider llm.Provider, win *acme.Win, winID int, conv *conversation.Conversation) error {
 	// Write immediately to give the user some feedback
-	_, err = win.Write("body", []byte("\n\n### Response... thinking..."))
+	_, err := win.Write("body", []byte("\n\n### Response... thinking..."))
 	if err != nil {
 		return fmt.Errorf("failed to write response back to window: %w", err)
 	}

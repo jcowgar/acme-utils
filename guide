@@ -3,3 +3,7 @@
 # Common Commands
 
 just release    <-->      just test
+
+## Issues found
+
+- Rvg does not work with multiple words Rvg including file, for example

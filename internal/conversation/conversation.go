@@ -18,7 +18,7 @@ type File struct {
 type Conversation struct {
 	Title        string
 	Model        string
-	Parameters   map[string]interface{} // For additional Ollama parameters
+	Parameters   map[string]interface{}
 	Messages     []Message
 	Files        []File // New Files property
 	IncludeFiles bool   // Flag to indicate if files should be included
@@ -49,7 +49,7 @@ func ParseContent(content string) (*Conversation, error) {
 		Messages:     make([]Message, 0),
 		Parameters:   make(map[string]interface{}),
 		Files:        make([]File, 0),
-		IncludeFiles: false, // Initialize to false by default
+		IncludeFiles: false,
 	}
 
 	var currentRole string
@@ -149,11 +149,6 @@ func ParseContent(content string) (*Conversation, error) {
 		return nil, errors.New("no messages found in content")
 	}
 
-	// Set default model if none specified
-	if conv.Model == "" {
-		conv.Model = "phi4"
-	}
-
 	return conv, nil
 }
 
@@ -180,13 +175,17 @@ func (c *Conversation) AddResponse(content string) {
 func (c *Conversation) String() string {
 	var sb strings.Builder
 
-	// Write front matter
-	sb.WriteString("---\n")
-	sb.WriteString(fmt.Sprintf("model: %s\n", c.Model))
-	for key, value := range c.Parameters {
-		sb.WriteString(fmt.Sprintf("%s: %v\n", key, value))
+	// Write front matter only if model or parameters exist
+	if c.Model != "" || len(c.Parameters) > 0 {
+		sb.WriteString("---\n")
+		if c.Model != "" {
+			sb.WriteString(fmt.Sprintf("model: %s\n", c.Model))
+		}
+		for key, value := range c.Parameters {
+			sb.WriteString(fmt.Sprintf("%s: %v\n", key, value))
+		}
+		sb.WriteString("---\n\n")
 	}
-	sb.WriteString("---\n\n")
 
 	// Write title
 	if c.Title != "" {
