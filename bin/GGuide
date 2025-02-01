@@ -10,9 +10,9 @@ ae() {
 	echo -n get | 9p write acme/$new_winid/ctl
 }
 
-if [ -f $HOME/guide ]; then
-	ae $HOME/guide
-elif [ -f $HOME/Documents/guide ]; then
-	ae $HOME/Documents/guide
+if [ -f $HOME/guide.md ]; then
+	ae $HOME/guide.md
+elif [ -f $HOME/Documents/guide.md ]; then
+	ae $HOME/Documents/guide.md
 fi
 

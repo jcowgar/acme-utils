@@ -16,8 +16,8 @@ find_guide_file() {
 	dir=$(pwd)
 
 	while [ "$dir" != "/" ]; do
-		if [ -f "$dir/guide" ]; then
-			echo "$dir/guide"
+		if [ -f "$dir/guide.md" ]; then
+			echo "$dir/guide.md"
 			return
 		fi
 		dir=$(dirname "$dir")
