@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -108,13 +109,13 @@ func MaybeTalkToLLM(provider llm.Provider, winID int) error {
 					continue
 				}
 
-				// Skip if the name is not a Normal filename. Acme has buffers such as +win that
-				// are not real files. We do not wish to include that content.
-				if !strings.Contains(winInfo.Name, ".") || strings.HasPrefix(winInfo.Name, "+") {
+				// Skip certain filenames
+				if inIgnoreFilenames(winInfo.Name) {
 					continue
 				}
 
-				log.Printf("including file: %v\n", winInfo.Name)
+				// Common debugging line, will remove from code sometime
+				// log.Printf("including file: %v\n", winInfo.Name)
 
 				// Open the window
 				win, err := acme.Open(winInfo.ID, nil)
@@ -219,4 +220,24 @@ func MaybeTalkToLLM(provider llm.Provider, winID int) error {
 	}
 
 	return nil
+}
+
+func inIgnoreFilenames(s string) bool {
+	ignoreAnywhere := []string{"+dirtree", "+Errors"}
+	ignoreJustFilename := []string{"guide"}
+
+	for _, item := range ignoreAnywhere {
+		if strings.Contains(s, item) {
+			return true
+		}
+	}
+
+	filename := filepath.Base(s)
+	for _, item := range ignoreJustFilename {
+		if item == filename {
+			return true
+		}
+	}
+
+	return false
 }
