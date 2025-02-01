@@ -27,6 +27,10 @@ formatting:
     in_place: true
   - extension: md
     command: prettier --print-width=78 --prose-wrap=always %f
+  - extension: ts
+    command: prettier --print-width=78 %f
+  - extension: svelte
+    command: prettier --print-width=78 %f
 ollama:
   default_model: phi4
   base_url: http://localhost:11434
