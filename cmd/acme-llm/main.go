@@ -41,7 +41,7 @@ func main() {
 		return
 	}
 
-	conv, err := ReadConversation(win, winID)
+	conv, err := readConversation(win, winID)
 	if err != nil {
 		log.Printf("failed to read conversation: %v\n", err)
 		return
@@ -63,13 +63,12 @@ func main() {
 		return
 	}
 
-	if err := MaybeTalkToLLM(provider, win, winID, conv); err != nil {
+	if err := sendLLMRequest(provider, win, winID, conv); err != nil {
 		log.Printf("error processing LLM request for window %d: %v\n", winID, err)
 	}
 }
 
-func ReadConversation(win *acme.Win, winID int) (*conversation.Conversation, error) {
-	// Get the current window size
+func readConversation(win *acme.Win, winID int) (*conversation.Conversation, error) {
 	err := win.Addr("0,$")
 	if err != nil {
 		return nil, fmt.Errorf("failed to set addr to full content: %w", err)
@@ -87,73 +86,59 @@ func ReadConversation(win *acme.Win, winID int) (*conversation.Conversation, err
 		return nil, fmt.Errorf("could not parse conversation content: %w", err)
 	}
 
-	// Get the last message and check if it's empty
 	lastMessage, err := conv.GetLastUserMessage()
 	if err != nil {
 		return nil, fmt.Errorf("could not get last user message: %w", err)
 	}
 
-	// If the last message is empty or only whitespace, return early
+	// If the last message is empty, return early, we have nothing really to do or
+	// send to the LLM
 	if strings.TrimSpace(lastMessage) == "" {
 		return nil, nil
 	}
 
+	includeFiles(conv, winID)
+
 	return conv, nil
 }
 
-func MaybeTalkToLLM(provider llm.Provider, win *acme.Win, winID int, conv *conversation.Conversation) error {
+func includeFiles(conv *conversation.Conversation, winID int) {
+	if !conv.IncludeFiles {
+		return
+	}
+
+	windows, err := acme.Windows()
+	if err == nil { // Don't fail if we can't access Acme
+		for _, winInfo := range windows {
+			if shouldSkipFile(&winInfo, winID) {
+				continue
+			}
+
+			win, err := acme.Open(winInfo.ID, nil)
+			if err != nil {
+				continue
+			}
+			defer win.CloseFiles()
+
+			content, err := win.ReadAll("body")
+			if err != nil {
+				continue
+			}
+
+			conv.AddFile(winInfo.Name, string(content))
+		}
+	}
+}
+
+func shouldSkipFile(winInfo *acme.WinInfo, winID int) bool {
+	return winInfo.IsDir || winInfo.ID == winID || inIgnoreFilenames(winInfo.Name)
+}
+
+func sendLLMRequest(provider llm.Provider, win *acme.Win, winID int, conv *conversation.Conversation) error {
 	// Write immediately to give the user some feedback
 	_, err := win.Write("body", []byte("\n\n### Response... thinking..."))
 	if err != nil {
 		return fmt.Errorf("failed to write response back to window: %w", err)
-	}
-
-	// Insert files into the conversation, if the user requested them.
-	if conv.IncludeFiles {
-		// Get all windows from Acme
-		windows, err := acme.Windows()
-		if err == nil { // Don't fail if we can't access Acme
-			for _, winInfo := range windows {
-				// Skip if it's a directory
-				if winInfo.IsDir {
-					continue
-				}
-
-				// Skip if it is our AI chat file
-				if winInfo.ID == winID {
-					continue
-				}
-
-				// Skip if filename is empty
-				if winInfo.Name == "" {
-					continue
-				}
-
-				// Skip certain filenames
-				if inIgnoreFilenames(winInfo.Name) {
-					continue
-				}
-
-				// Common debugging line, will remove from code sometime
-				// log.Printf("including file: %v\n", winInfo.Name)
-
-				// Open the window
-				win, err := acme.Open(winInfo.ID, nil)
-				if err != nil {
-					continue
-				}
-				defer win.CloseFiles()
-
-				// Read the content of the window
-				content, err := win.ReadAll("body")
-				if err != nil {
-					continue
-				}
-
-				// Add the file to our conversation
-				conv.AddFile(winInfo.Name, string(content))
-			}
-		}
 	}
 
 	// Convert messages to provider format
@@ -243,8 +228,8 @@ func MaybeTalkToLLM(provider llm.Provider, win *acme.Win, winID int, conv *conve
 }
 
 func inIgnoreFilenames(s string) bool {
-	ignoreAnywhere := []string{"+dirtree", "+Errors"}
-	ignoreJustFilename := []string{"guide"}
+	ignoreAnywhere := []string{"+dirtree", "+watch", "+win", "+Errors"}
+	ignoreJustFilename := []string{"", "guide"}
 
 	for _, item := range ignoreAnywhere {
 		if strings.Contains(s, item) {
