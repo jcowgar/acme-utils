@@ -180,6 +180,7 @@ func MaybeTalkToOllama(client *ollamaapi.Client, winID int) error {
 		Model:    conversation.Model,
 		Messages: messages,
 		Stream:   &stream,
+		Options:  map[string]interface{}{"num_ctx": 8192},
 	}
 
 	var response *ollamaapi.ChatResponse
