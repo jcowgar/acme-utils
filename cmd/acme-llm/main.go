@@ -200,6 +200,12 @@ func sendLLMRequest(provider llm.Provider, win *acme.Win, winID int, conv *conve
 		return fmt.Errorf("failed to write response back to window: %w", err)
 	}
 
+	// Save the file
+	_, err = win.Write("ctl", []byte("put"))
+	if err != nil {
+		return fmt.Errorf("failed to save the file: %w", err)
+	}
+
 	// Move the cursor to the end of the file
 	err = win.Addr("$")
 	if err != nil {
@@ -212,17 +218,24 @@ func sendLLMRequest(provider llm.Provider, win *acme.Win, winID int, conv *conve
 		return fmt.Errorf("failed to set dot to end: %w", err)
 	}
 
-	// Show the cursor at the end
+	// Search backward to the ### Response
+	err = win.Addr("?### Response?")
+	if err != nil {
+		return fmt.Errorf("failed to move cursor to the last Response: %w", err)
+	}
+
+	// Set the dot to the end of the file
+	_, err = win.Write("ctl", []byte("dot=addr"))
+	if err != nil {
+		return fmt.Errorf("failed to set dot to end: %w", err)
+	}
+
+	// Be sure to make this selection visible
 	_, err = win.Write("ctl", []byte("show"))
 	if err != nil {
 		return fmt.Errorf("failed to show cursor: %w", err)
 	}
 
-	// Save the file
-	_, err = win.Write("ctl", []byte("put"))
-	if err != nil {
-		return fmt.Errorf("failed to save the file: %w", err)
-	}
 
 	return nil
 }
