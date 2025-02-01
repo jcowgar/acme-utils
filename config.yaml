@@ -32,10 +32,16 @@ formatting:
   - extension: svelte
     command: prettier --print-width=78 %f
 llm:
-  default_provider: ollama
+  default_provider: gpt-4o-mini
   providers:
     ollama:
       type: ollama
       model: qwen2.5-coder:32b
       params:
         base_url: http://10.0.0.50:11434
+    gpt-4o-mini:
+      type: openai
+      model: openai/gpt-4o-mini
+      params:
+        base_url: https://openrouter.ai/api/v1
+        api_key: $ENV:OPENROUTER_API_KEY

@@ -9,4 +9,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+require github.com/sashabaranov/go-openai v1.36.1 // indirect
+
 replace github.com/jcowgar/acme-utils => ./

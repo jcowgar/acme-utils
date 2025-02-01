@@ -5,18 +5,19 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 
 	yaml "gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	Tagger     []TagConfig  `yaml:"tagger"`
-	Formatting []Formatter  `yaml:"formatting"`
-	LLM        LLMConfig    `yaml:"llm"`
+	Tagger     []TagConfig `yaml:"tagger"`
+	Formatting []Formatter `yaml:"formatting"`
+	LLM        LLMConfig   `yaml:"llm"`
 }
 
 type LLMConfig struct {
-	DefaultProvider string                 `yaml:"default_provider"`
+	DefaultProvider string                    `yaml:"default_provider"`
 	Providers       map[string]ProviderConfig `yaml:"providers"`
 }
 
@@ -47,6 +48,19 @@ func Load() (Config, error) {
 	}
 
 	return c, nil
+}
+
+// Expand a string value.
+//
+// If the value starts with $ENV: then it reads the value from the
+// environment key specified, otherwise, the value is simply returned.
+func ExpandString(value string) string {
+	if strings.HasPrefix(value, "$ENV:") {
+		envVar := strings.TrimPrefix(value, "$ENV:")
+		return os.Getenv(envVar)
+	}
+
+	return value
 }
 
 // getConfigFile constructs the full path for a given application's config file.
