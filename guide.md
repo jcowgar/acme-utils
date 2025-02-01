@@ -1,7 +1,10 @@
-# Current areas of focus
+## Common commands
 
-# Common Commands
+| Command               | Description                                |
+| --------------------- | ------------------------------------------ |
+| Watch -r just release | Watch for any changes and rebuild binaries |
+| Watch -r just test    | Watch for any changes and run tests        |
 
-just release    <-->      just test
+## Current areas of focus
 
 ## Issues found
