@@ -1,8 +1,9 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 if [ $# -gt 0 ]; then
     # If parameters are provided, use them
-    rg --vimgrep "$@"
+    search_term="$*"
+    rg --vimgrep -- "$search_term"
 else
     # No parameters, get selected text from Acme window
     # Read the selected text using 9p read
