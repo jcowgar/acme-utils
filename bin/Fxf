@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# Store the results of fd in an array
+mapfile -t files < <(fd "$@")
+
+# Get the number of files found
+file_count=${#files[@]}
+
+if [ "$file_count" -eq 0 ]; then
+    exit 0
+elif [ "$file_count" -eq 1 ]; then
+	9p read acme/new/body
+	new_winid=$(9p ls acme | sort -g | tail -n 1)
+
+	echo "name ${files[0]}" | 9p write acme/$new_winid/ctl
+	echo -n get | 9p write acme/$new_winid/ctl
+else
+    printf '%s\n' "${files[@]}"
+fi
