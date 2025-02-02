@@ -38,7 +38,15 @@ chat_dirname=$(dirname $chat_fname)
 
 mkdir -p $chat_dirname
 
-echo -e "# Title Here\n${prompt}\n\n## You [[LlmSend]]\n" | 9p write acme/new/body
+# Check for an optional model parameter
+model_name="$1"
+frontmatter=""
+
+if [ -n "$model_name" ]; then
+    frontmatter="---\nmodel: $model_name\n---\n\n"
+fi
+
+echo -e "${frontmatter}# Title Here\n${prompt}\n\n## You [[LlmSend]]\n" | 9p write acme/new/body
 
 new_winid=$(9p ls acme | sort -g | tail -n 1)
 
