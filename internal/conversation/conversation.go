@@ -8,20 +8,28 @@ import (
 	"time"
 )
 
-// File represents a file attached to the conversation
-type File struct {
+const (
+	ReferenceTypeFile          = "file"
+	ReferenceTypeURL           = "url"
+	ReferenceTypeCommandOutput = "command_output"
+)
+
+// ReferenceMaterial represents attached content to the conversation
+type ReferenceMaterial struct {
 	Name    string
 	Content string
+	Typ     string
 }
 
 // Conversation represents the entire chat interaction
 type Conversation struct {
-	Title        string
-	Model        string
-	Parameters   map[string]interface{}
-	Messages     []Message
-	Files        []File // New Files property
-	IncludeFiles bool   // Flag to indicate if files should be included
+	Title             string
+	Model             string
+	Parameters        map[string]interface{}
+	Messages          []Message
+	ReferenceMaterial []ReferenceMaterial
+	IncludeFiles      bool
+	ResourceRequests  []ResourceRequest
 }
 
 // Message represents a single message in the conversation
@@ -31,14 +39,15 @@ type Message struct {
 	Timestamp time.Time // Optional, for future use
 }
 
-// AddFile adds a new file to the conversation
-func (c *Conversation) AddFile(name string, content string) {
-	if c.Files == nil {
-		c.Files = make([]File, 0)
+// AddReferenceMaterial adds a new resource to the conversation
+func (c *Conversation) AddReferenceMaterial(typ string, name string, content string) {
+	if c.ReferenceMaterial == nil {
+		c.ReferenceMaterial = make([]ReferenceMaterial, 0)
 	}
-	c.Files = append(c.Files, File{
+	c.ReferenceMaterial = append(c.ReferenceMaterial, ReferenceMaterial{
 		Name:    name,
 		Content: content,
+		Typ:     typ,
 	})
 }
 
@@ -46,10 +55,10 @@ func (c *Conversation) AddFile(name string, content string) {
 func ParseContent(content string) (*Conversation, error) {
 	scanner := bufio.NewScanner(strings.NewReader(content))
 	conv := &Conversation{
-		Messages:     make([]Message, 0),
-		Parameters:   make(map[string]interface{}),
-		Files:        make([]File, 0),
-		IncludeFiles: false,
+		Messages:          make([]Message, 0),
+		Parameters:        make(map[string]interface{}),
+		ReferenceMaterial: make([]ReferenceMaterial, 0),
+		IncludeFiles:      false,
 	}
 
 	var currentRole string
@@ -82,6 +91,17 @@ func ParseContent(content string) (*Conversation, error) {
 				}
 			}
 			continue
+		}
+
+		// Handle resource requests
+		if strings.HasPrefix(line, "+file ") {
+			conv.ResourceRequests = append(conv.ResourceRequests, FileResourceRequest{
+				Filename: strings.TrimPrefix(line, "+file "),
+			})
+		} else if strings.HasPrefix(line, "+url ") {
+			conv.ResourceRequests = append(conv.ResourceRequests, URLResourceRequest{
+				URL: strings.TrimPrefix(line, "+url "),
+			})
 		}
 
 		// Handle title (first level heading)
@@ -159,6 +179,7 @@ func (c *Conversation) GetLastUserMessage() (string, error) {
 			return c.Messages[i].Content, nil
 		}
 	}
+
 	return "", errors.New("no user messages found")
 }
 

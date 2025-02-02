@@ -97,6 +97,17 @@ func readConversation(win *acme.Win, winID int) (*conversation.Conversation, err
 		return nil, nil
 	}
 
+	for _, req := range conv.ResourceRequests {
+		resources, err := req.Fetch()
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch resource: %w", err)
+		}
+
+		for _, resource := range resources {
+			conv.AddReferenceMaterial(resource.ResourceType, resource.Name, resource.Content)
+		}
+	}
+
 	includeFiles(conv, winID)
 
 	return conv, nil
@@ -125,7 +136,7 @@ func includeFiles(conv *conversation.Conversation, winID int) {
 				continue
 			}
 
-			conv.AddFile(winInfo.Name, string(content))
+			conv.AddReferenceMaterial(conversation.ReferenceTypeFile, winInfo.Name, string(content))
 		}
 	}
 }
@@ -152,22 +163,20 @@ func sendLLMRequest(provider llm.Provider, win *acme.Win, winID int, conv *conve
 		}
 
 		content := msg.Content
-		if conv.IncludeFiles &&
-			!filesInserted &&
-			role == "user" &&
-			strings.Contains(msg.Content, "+files") &&
-			len(conv.Files) > 0 {
-
+		if !filesInserted && role == "user" && len(conv.ReferenceMaterial) > 0 {
 			var filesSection strings.Builder
-			filesSection.WriteString("\n\n# Relevant Files\n\n")
 
-			for _, file := range conv.Files {
-				filesSection.WriteString(fmt.Sprintf("Filename: %s\n```\n%s\n```\n\n",
+			filesSection.WriteString("\n\n# Relevant Material\n\n")
+
+			for _, file := range conv.ReferenceMaterial {
+				filesSection.WriteString(fmt.Sprintf("Reference Material Type: %s\nName: %s\n```\n%s\n```\n\n",
+					file.Typ,
 					file.Name,
 					file.Content))
 			}
 
 			content += filesSection.String()
+
 			filesInserted = true
 		}
 
@@ -235,7 +244,6 @@ func sendLLMRequest(provider llm.Provider, win *acme.Win, winID int, conv *conve
 	if err != nil {
 		return fmt.Errorf("failed to show cursor: %w", err)
 	}
-
 
 	return nil
 }
