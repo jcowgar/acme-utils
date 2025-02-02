@@ -18,7 +18,7 @@ type Resource struct {
 }
 
 type ResourceRequest interface {
-	Fetch() ([]Resource, error)
+	Fetch(projectDirectory string) ([]Resource, error)
 }
 
 type FileResourceRequest struct {
@@ -33,28 +33,37 @@ type URLResourceRequest struct {
 	URL string
 }
 
-func (r FileResourceRequest) Fetch() ([]Resource, error) {
+func (r FileResourceRequest) Fetch(projectDirectory string) ([]Resource, error) {
 	// Should look for an open Acme window with this filename. If found, the content
 	// should be taken directly from the buffer as to have the latest content.
 	// The content may not have been saved yet. If it is not an open window, then it
 	// should be read from disk.
 
-	full_filename, err := filepath.Abs(r.Filename)
+	fullFilename, err := filepath.Abs(filepath.Join(projectDirectory, r.Filename))
 	if err != nil {
 		return []Resource{}, fmt.Errorf("failed to convert path to absolute: %w", err)
 	}
 
-	data, err := os.ReadFile(full_filename)
+	relativePath, err := filepath.Rel(projectDirectory, fullFilename)
+	if err != nil {
+		return []Resource{}, fmt.Errorf("failed to convert file path to relative: %w", err)
+	}
+
+	data, err := os.ReadFile(fullFilename)
 	if err != nil {
 		return []Resource{}, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	return []Resource{
-		Resource{ResourceType: "file", Name: r.Filename, Content: string(data)},
+		Resource{
+			ResourceType: "file",
+			Name:         relativePath,
+			Content:      string(data),
+		},
 	}, nil
 }
 
-func (r FileGlobResourceRequest) Fetch() ([]Resource, error) {
+func (r FileGlobResourceRequest) Fetch(projectDirectory string) ([]Resource, error) {
 	// Find all matching files on the file system and then create/execute many
 	// FileResourceRequest statements.
 
@@ -63,7 +72,7 @@ func (r FileGlobResourceRequest) Fetch() ([]Resource, error) {
 	}, nil
 }
 
-func (r URLResourceRequest) Fetch() ([]Resource, error) {
+func (r URLResourceRequest) Fetch(projectDirectory string) ([]Resource, error) {
 	content, err := fetchURLWithTimeout(r.URL)
 	if err != nil {
 		return []Resource{}, fmt.Errorf("could not fetch URL: %w", err)

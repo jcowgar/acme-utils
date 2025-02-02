@@ -97,8 +97,10 @@ func readConversation(win *acme.Win, winID int) (*conversation.Conversation, err
 		return nil, nil
 	}
 
+	winName := getProjectDirectory(winID)
+
 	for _, req := range conv.ResourceRequests {
-		resources, err := req.Fetch()
+		resources, err := req.Fetch(winName)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch resource: %w", err)
 		}
@@ -113,31 +115,73 @@ func readConversation(win *acme.Win, winID int) (*conversation.Conversation, err
 	return conv, nil
 }
 
+func getProjectDirectory(winID int) string {
+	windows, err := acme.Windows()
+	if err != nil {
+		// Don't fail if we can't access Acme
+		return ""
+	}
+
+	for _, winInfo := range windows {
+		if winInfo.ID == winID {
+			return extractProjectDir(winInfo.Name)
+		}
+	}
+
+	return ""
+}
+
+func extractProjectDir(filename string) string {
+	// Split by double underscore to separate components
+	parts := strings.Split(strings.TrimSuffix(filename, ".md"), "__")
+
+	// Remove the first part (timestamp)
+	if len(parts) < 2 {
+		return "" // Return empty string if format is invalid
+	}
+
+	// Join the middle parts with "/" but handle the last part specially
+	projectParts := parts[1:]
+	lastPart := projectParts[len(projectParts)-1]
+
+	// Remove the .md extension from the last part
+	lastPart = strings.TrimSuffix(lastPart, ".md")
+	projectParts[len(projectParts)-1] = lastPart
+
+	// Join all parts with "/"
+	projectPath := "/" + strings.Join(projectParts, "/")
+
+	return projectPath
+}
+
 func includeFiles(conv *conversation.Conversation, winID int) {
 	if !conv.IncludeFiles {
 		return
 	}
 
 	windows, err := acme.Windows()
-	if err == nil { // Don't fail if we can't access Acme
-		for _, winInfo := range windows {
-			if shouldSkipFile(&winInfo, winID) {
-				continue
-			}
+	if err != nil {
+		// Don't fail if we can't access Acme
+		return
+	}
 
-			win, err := acme.Open(winInfo.ID, nil)
-			if err != nil {
-				continue
-			}
-			defer win.CloseFiles()
-
-			content, err := win.ReadAll("body")
-			if err != nil {
-				continue
-			}
-
-			conv.AddReferenceMaterial(conversation.ReferenceTypeFile, winInfo.Name, string(content))
+	for _, winInfo := range windows {
+		if shouldSkipFile(&winInfo, winID) {
+			continue
 		}
+
+		win, err := acme.Open(winInfo.ID, nil)
+		if err != nil {
+			continue
+		}
+		defer win.CloseFiles()
+
+		content, err := win.ReadAll("body")
+		if err != nil {
+			continue
+		}
+
+		conv.AddReferenceMaterial(conversation.ReferenceTypeFile, winInfo.Name, string(content))
 	}
 }
 
