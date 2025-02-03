@@ -51,3 +51,5 @@ llm:
       params:
         base_url: https://openrouter.ai/api/v1
         api_key: $ENV:OPENROUTER_API_KEY
+  glob_ignore:
+    - _test.go

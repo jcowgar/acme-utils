@@ -19,6 +19,7 @@ type Config struct {
 type LLMConfig struct {
 	DefaultProvider string                    `yaml:"default_provider"`
 	Providers       map[string]ProviderConfig `yaml:"providers"`
+	GlobIgnore      []string                  `yaml:"glob_ignore"`
 }
 
 type ProviderConfig struct {

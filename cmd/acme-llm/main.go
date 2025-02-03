@@ -41,7 +41,7 @@ func main() {
 		return
 	}
 
-	conv, err := readConversation(win, winID)
+	conv, err := readConversation(&cfg, win, winID)
 	if err != nil {
 		log.Printf("failed to read conversation: %v\n", err)
 		return
@@ -68,7 +68,7 @@ func main() {
 	}
 }
 
-func readConversation(win *acme.Win, winID int) (*conversation.Conversation, error) {
+func readConversation(cfg *config.Config, win *acme.Win, winID int) (*conversation.Conversation, error) {
 	err := win.Addr("0,$")
 	if err != nil {
 		return nil, fmt.Errorf("failed to set addr to full content: %w", err)
@@ -100,7 +100,7 @@ func readConversation(win *acme.Win, winID int) (*conversation.Conversation, err
 	winName := getProjectDirectory(winID)
 
 	for _, req := range conv.ResourceRequests {
-		resources, err := req.Fetch(winName)
+		resources, err := req.Fetch(cfg, winName)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch resource: %w", err)
 		}

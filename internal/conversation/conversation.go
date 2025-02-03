@@ -102,6 +102,10 @@ func ParseContent(content string) (*Conversation, error) {
 			conv.ResourceRequests = append(conv.ResourceRequests, URLResourceRequest{
 				URL: strings.TrimPrefix(line, "+url "),
 			})
+		} else if strings.HasPrefix(line, "+glob") {
+			conv.ResourceRequests = append(conv.ResourceRequests, FileGlobResourceRequest{
+				Pattern: strings.TrimPrefix(line, "+glob "),
+			})
 		}
 
 		// Handle title (first level heading)

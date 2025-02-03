@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/jaytaylor/html2text"
+	"github.com/jcowgar/acme-utils/internal/config"
 )
 
 type Resource struct {
@@ -18,7 +20,7 @@ type Resource struct {
 }
 
 type ResourceRequest interface {
-	Fetch(projectDirectory string) ([]Resource, error)
+	Fetch(cfg *config.Config, projectDirectory string) ([]Resource, error)
 }
 
 type FileResourceRequest struct {
@@ -33,15 +35,20 @@ type URLResourceRequest struct {
 	URL string
 }
 
-func (r FileResourceRequest) Fetch(projectDirectory string) ([]Resource, error) {
+func (r FileResourceRequest) Fetch(cfg *config.Config, projectDirectory string) ([]Resource, error) {
 	// Should look for an open Acme window with this filename. If found, the content
 	// should be taken directly from the buffer as to have the latest content.
 	// The content may not have been saved yet. If it is not an open window, then it
 	// should be read from disk.
 
-	fullFilename, err := filepath.Abs(filepath.Join(projectDirectory, r.Filename))
-	if err != nil {
-		return []Resource{}, fmt.Errorf("failed to convert path to absolute: %w", err)
+	fullFilename := r.Filename
+	if !filepath.IsAbs(fullFilename) {
+		f, err := filepath.Abs(filepath.Join(projectDirectory, r.Filename))
+		if err != nil {
+			return []Resource{}, fmt.Errorf("failed to convert path to absolute: %w", err)
+		}
+
+		fullFilename = f
 	}
 
 	relativePath, err := filepath.Rel(projectDirectory, fullFilename)
@@ -63,16 +70,40 @@ func (r FileResourceRequest) Fetch(projectDirectory string) ([]Resource, error) 
 	}, nil
 }
 
-func (r FileGlobResourceRequest) Fetch(projectDirectory string) ([]Resource, error) {
+func (r FileGlobResourceRequest) Fetch(cfg *config.Config, projectDirectory string) ([]Resource, error) {
 	// Find all matching files on the file system and then create/execute many
 	// FileResourceRequest statements.
 
-	return []Resource{
-		Resource{ResourceType: "file", Name: r.Pattern, Content: "Hello, World!"},
-	}, nil
+	globPattern := filepath.Join(projectDirectory, r.Pattern)
+
+	glob, err := filepath.Glob(globPattern)
+	if err != nil {
+		return []Resource{}, fmt.Errorf("could not glob: %w", err)
+	}
+
+	resourceRequests := make([]Resource, 0)
+
+fileLoop:
+	for _, filename := range glob {
+		for _, ignore := range cfg.LLM.GlobIgnore {
+			if strings.Contains(filename, ignore) {
+				continue fileLoop
+			}
+		}
+
+		fileRequest := FileResourceRequest{Filename: filename}
+		resource, err := fileRequest.Fetch(cfg, projectDirectory)
+		if err != nil {
+			return []Resource{}, fmt.Errorf("could not fetch file from glob: %w", err)
+		}
+
+		resourceRequests = append(resourceRequests, resource[0])
+	}
+
+	return resourceRequests, nil
 }
 
-func (r URLResourceRequest) Fetch(projectDirectory string) ([]Resource, error) {
+func (r URLResourceRequest) Fetch(cfg *config.Config, projectDirectory string) ([]Resource, error) {
 	content, err := fetchURLWithTimeout(r.URL)
 	if err != nil {
 		return []Resource{}, fmt.Errorf("could not fetch URL: %w", err)
