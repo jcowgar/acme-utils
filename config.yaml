@@ -8,7 +8,7 @@ tagger:
   - extension: sql
     tag: sqlf psqlq asqq
   - extension: md
-    tag: Font
+    tag: Font Marked
   - extension: ex
     tag: Ldef Lhov
   - extension: exs
@@ -48,6 +48,18 @@ llm:
     gpt-4o-mini:
       type: openai
       model: openai/gpt-4o-mini
+      params:
+        base_url: https://openrouter.ai/api/v1
+        api_key: $ENV:OPENROUTER_API_KEY
+    o1-mini:
+      type: openai
+      model: openai/o1-mini
+      params:
+        base_url: https://openrouter.ai/api/v1
+        api_key: $ENV:OPENROUTER_API_KEY
+    o3-mini:
+      type: openai
+      model: openai/o3-mini
       params:
         base_url: https://openrouter.ai/api/v1
         api_key: $ENV:OPENROUTER_API_KEY
