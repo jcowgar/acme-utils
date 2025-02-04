@@ -7,4 +7,6 @@
 
 ## Current areas of focus
 
+- Add chat_transcripts_directory to config.yaml
+
 ## Issues found

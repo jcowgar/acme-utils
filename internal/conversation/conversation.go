@@ -24,7 +24,9 @@ type ReferenceMaterial struct {
 // Conversation represents the entire chat interaction
 type Conversation struct {
 	Title             string
+	Prompt            string
 	Model             string
+	ProjectDirectory  string
 	Parameters        map[string]interface{}
 	Messages          []Message
 	ReferenceMaterial []ReferenceMaterial
@@ -86,6 +88,8 @@ func ParseContent(content string) (*Conversation, error) {
 				value := strings.TrimSpace(parts[1])
 				if key == "model" {
 					conv.Model = value
+				} else if key == "project_directory" {
+					conv.ProjectDirectory = value
 				} else {
 					conv.Parameters[key] = value
 				}
